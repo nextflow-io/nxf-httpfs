@@ -1,0 +1,18 @@
+group 'nextflow'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'maven'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+description = """HTTP File System"""
+
+repositories {
+    maven { url "http://repo.maven.apache.org/maven2" }
+}
+
+dependencies {
+    testCompile "org.spockframework:spock-core:1.0-groovy-2.4"
+}
