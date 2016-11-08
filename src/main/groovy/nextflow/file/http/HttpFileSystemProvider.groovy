@@ -202,7 +202,7 @@ class HttpFileSystemProvider extends FileSystemProvider {
     def <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
         if ( type == BasicFileAttributes || type == HttpFileAttributes) {
             def p = (HttpPath) path
-
+            return (A)readHttpAttributes(p)
         }
         throw new UnsupportedOperationException("Not a valid HTTP file attribute type: $type")
     }
@@ -217,13 +217,13 @@ class HttpFileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("Set file attributes not supported by HttpFileSystem")
     }
 
-    HttpFileAttributes readAttribute(HttpPath path) {
+    protected HttpFileAttributes readHttpAttributes(HttpPath path) {
         def conn = path.toUri().toURL().openConnection()
         def header = conn.getHeaderFields()
-        readAttribute(header)
+        readHttpAttributes(header)
     }
 
-    HttpFileAttributes readAttribute(Map<String,List<String>> header) {
+    protected HttpFileAttributes readHttpAttributes(Map<String,List<String>> header) {
         def lastMod = header.get("Last-Modified")?.get(0)
         def contentLen = header.get("Content-Length")?.get(0)?.toLong()
         def dateFormat = new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z')

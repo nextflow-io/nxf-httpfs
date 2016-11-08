@@ -28,7 +28,7 @@ class HttpFileSystemProviderTest extends Specification {
         def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729'] ]
 
         when:
-        def attrs = fs.readAttribute(attrMap)
+        def attrs = fs.readHttpAttributes(attrMap)
 
         then:
         attrs.lastModifiedTime() == FileTime.from(Instant.parse('2016-11-04T21:50:34Z'))
@@ -41,7 +41,7 @@ class HttpFileSystemProviderTest extends Specification {
         def fsp = new HttpFileSystemProvider()
 
         when:
-        def attrs = fsp.readAttribute(new HttpPath(fs, "http://www.nextflow.io/index.html"))
+        def attrs = fsp.readHttpAttributes(new HttpPath(fs, "http://www.nextflow.io/index.html"))
 
         then:
         attrs.lastModifiedTime() == null
