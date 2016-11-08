@@ -225,8 +225,9 @@ class HttpFileSystemProvider extends FileSystemProvider {
 
     HttpFileAttributes readAttribute(Map<String,List<String>> header) {
         def lastMod = header.get("Last-Modified")?.get(0)
-        def modTime = lastMod ? FileTime.from(new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z').parse(lastMod).toInstant()) : (FileTime)null
         def contentLen = header.get("Content-Length")?.get(0)?.toLong()
+        def dateFormat = new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z')
+        def modTime = lastMod ? FileTime.from(dateFormat.parse(lastMod).toInstant()) : (FileTime)null
         new HttpFileAttributes(modTime, contentLen)
     }
 }
