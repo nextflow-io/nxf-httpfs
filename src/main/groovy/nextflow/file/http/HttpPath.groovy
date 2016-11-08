@@ -5,6 +5,7 @@ import groovy.transform.CompileStatic
 import java.nio.file.FileSystem
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.nio.file.WatchService
@@ -16,104 +17,112 @@ import java.nio.file.WatchService
 class HttpPath implements Path {
 
     private URI uri
+    private HttpFileSystem fs
+    private Path path
 
-    HttpPath(String url) {
-        this(new URI(url))
+    HttpPath(HttpFileSystem fs, String url) {
+        this(fs, new URI(url))
     }
 
-    HttpPath(URI uri) {
+    HttpPath(HttpFileSystem fs, URI uri) {
         this.uri = uri
+        this.fs = fs
+        this.path = Paths.get(uri.path)
+    }
 
+    private HttpPath createHttpPath(String path) {
+        return new HttpPath(fs, new URI("${uri.scheme}://${uri.authority}${path}"))
     }
 
     @Override
     FileSystem getFileSystem() {
-        return null
+        return fs
     }
 
     @Override
     boolean isAbsolute() {
-        return false
+        return uri.absolute
     }
 
     @Override
     Path getRoot() {
-        return null
+        return createHttpPath("/")
     }
 
     @Override
     Path getFileName() {
-        return null
+        return path.fileName
     }
 
     @Override
     Path getParent() {
-        return null
+        return getRoot().resolve(path.parent)
     }
 
     @Override
     int getNameCount() {
-        return 0
+        return path.nameCount
     }
 
     @Override
     Path getName(int index) {
-        return null
+        return path.getName(index)
     }
 
     @Override
     Path subpath(int beginIndex, int endIndex) {
-        return null
+        return path.subpath(beginIndex, endIndex)
     }
 
     @Override
     boolean startsWith(Path other) {
-        return false
+        return startsWith(other.toString())
     }
 
     @Override
     boolean startsWith(String other) {
-        return false
+        return path.startsWith(other)
     }
 
     @Override
     boolean endsWith(Path other) {
-        return false
+        return endsWith(other.toString())
     }
 
     @Override
     boolean endsWith(String other) {
-        return false
+        return path.endsWith(other)
     }
 
     @Override
     Path normalize() {
-        return null
+        return path.normalize()
     }
 
     @Override
     Path resolve(Path other) {
-        return null
+        return resolve(other.toString())
     }
 
     @Override
     Path resolve(String other) {
-        return null
+        return createHttpPath(path.resolve(other).toString())
     }
 
     @Override
     Path resolveSibling(Path other) {
-        return null
+        return resolveSibling(other.toString())
     }
 
     @Override
     Path resolveSibling(String other) {
-        return null
+        return createHttpPath(path.resolveSibling(other).toString())
     }
 
     @Override
     Path relativize(Path other) {
-        return null
+        def otherPath = ((HttpPath)other).path
+        return createHttpPath(path.relativize(otherPath).toString())
     }
 
     @Override
@@ -143,12 +152,12 @@ class HttpPath implements Path {
 
     @Override
     WatchKey register(WatchService watcher, WatchEvent.Kind<?>[] events, WatchEvent.Modifier... modifiers) throws IOException {
-        return null
+        throw new UnsupportedOperationException("Register not supported by HttpFileSystem")
     }
 
     @Override
     WatchKey register(WatchService watcher, WatchEvent.Kind<?>... events) throws IOException {
-        return null
+        throw new UnsupportedOperationException("Register not supported by HttpFileSystem")
     }
 
     @Override
@@ -158,6 +167,23 @@ class HttpPath implements Path {
 
     @Override
     int compareTo(Path other) {
-        return 0
+        return this.toString() <=> other.toString()
+    }
+
+    @Override
+    boolean equals(Object other) {
+        if (other.class != HttpPath) {
+            return false
+        }
+        def that = (HttpPath)other
+        if (this.fs != that.fs) {
+            return false
+        }
+        return this.uri == that.uri
+    }
+
+    @Override
+    int hashCode() {
+        return Objects.hash(fs, uri)
     }
 }

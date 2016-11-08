@@ -17,7 +17,10 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileAttributeView
+import java.nio.file.attribute.FileTime
 import java.nio.file.spi.FileSystemProvider
+import java.text.SimpleDateFormat
+import java.time.Instant
 
 /**
  * Created by emilio on 08/11/16.
@@ -53,7 +56,7 @@ class HttpFileSystemProvider extends FileSystemProvider {
 
     @Override
     Path getPath(URI uri) {
-        return new HttpPath(uri)
+        return new HttpPath(httpfs, uri)
     }
 
     @Override
@@ -147,17 +150,17 @@ class HttpFileSystemProvider extends FileSystemProvider {
 
     @Override
     DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
-        return null
+        throw new UnsupportedOperationException("Direcotry listing unsupported by HttpFileSystem")
     }
 
     @Override
     void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-
+        throw new UnsupportedOperationException("Create directory unsupportedby HttpFileSystem")
     }
 
     @Override
     void delete(Path path) throws IOException {
-
+        throw new UnsupportedOperationException("Delete unsupported by HttpFileSystem")
     }
 
     @Override
@@ -167,22 +170,22 @@ class HttpFileSystemProvider extends FileSystemProvider {
 
     @Override
     void move(Path source, Path target, CopyOption... options) throws IOException {
-
+        throw new UnsupportedOperationException("Move not supported by HttpFileSystem")
     }
 
     @Override
     boolean isSameFile(Path path, Path path2) throws IOException {
-        return false
+        return path == path2
     }
 
     @Override
     boolean isHidden(Path path) throws IOException {
-        return false
+        return path.getFileName().startsWith('.')
     }
 
     @Override
     FileStore getFileStore(Path path) throws IOException {
-        return null
+        throw new UnsupportedOperationException("File store not supported by HttpFileSystem")
     }
 
     @Override
@@ -197,16 +200,33 @@ class HttpFileSystemProvider extends FileSystemProvider {
 
     @Override
     def <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
-        return null
+        if ( type == BasicFileAttributes || type == HttpFileAttributes) {
+            def p = (HttpPath) path
+
+        }
+        throw new UnsupportedOperationException("Not a valid HTTP file attribute type: $type")
     }
 
     @Override
     Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        return null
+        throw new UnsupportedOperationException("Read file attributes no supported by HttpFileSystem")
     }
 
     @Override
     void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
+        throw new UnsupportedOperationException("Set file attributes not supported by HttpFileSystem")
+    }
 
+    HttpFileAttributes readAttribute(HttpPath path) {
+        def conn = path.toUri().toURL().openConnection()
+        def header = conn.getHeaderFields()
+        readAttribute(header)
+    }
+
+    HttpFileAttributes readAttribute(Map<String,List<String>> header) {
+        def lastMod = header.get("Last-Modified")?.get(0)
+        def modTime = lastMod ? FileTime.from(new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z').parse(lastMod).toInstant()) : (FileTime)null
+        def contentLen = header.get("Content-Length")?.get(0)?.toLong()
+        new HttpFileAttributes(modTime, contentLen)
     }
 }
