@@ -1,4 +1,3 @@
-package nextflow.file.http
 /*
  * Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
@@ -19,11 +18,8 @@ package nextflow.file.http
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+package nextflow.file.http
 import spock.lang.Specification
-
-import java.nio.file.attribute.FileTime
-import java.time.Instant
-
 /**
  * Created by emilio on 08/11/16.
  */
@@ -50,7 +46,7 @@ class HttpFileSystemProviderTest extends Specification {
         def attrs = fs.readHttpAttributes(attrMap)
 
         then:
-        attrs.lastModifiedTime() == FileTime.from(Instant.parse('2016-11-04T21:50:34Z'))
+        attrs.lastModifiedTime().toString() == '2016-11-04T21:50:34Z'
         attrs.size == 21729
     }
 

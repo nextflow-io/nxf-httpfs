@@ -1,6 +1,3 @@
-package nextflow.file.http
-
-import groovy.transform.CompileStatic
 /*
  * Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.
@@ -21,7 +18,7 @@ import groovy.transform.CompileStatic
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import java.nio.channels.Channels
+package nextflow.file.http
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.AccessMode
 import java.nio.file.CopyOption
@@ -39,8 +36,9 @@ import java.nio.file.attribute.FileAttributeView
 import java.nio.file.attribute.FileTime
 import java.nio.file.spi.FileSystemProvider
 import java.text.SimpleDateFormat
-import java.time.Instant
+import java.util.concurrent.TimeUnit
 
+import groovy.transform.CompileStatic
 /**
  * Created by emilio on 08/11/16.
  */
@@ -246,7 +244,7 @@ class HttpFileSystemProvider extends FileSystemProvider {
         def lastMod = header.get("Last-Modified")?.get(0)
         def contentLen = header.get("Content-Length")?.get(0)?.toLong()
         def dateFormat = new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z')
-        def modTime = lastMod ? FileTime.from(dateFormat.parse(lastMod).toInstant()) : (FileTime)null
+        def modTime = lastMod ? FileTime.from(dateFormat.parse(lastMod).time, TimeUnit.MILLISECONDS) : (FileTime)null
         new HttpFileAttributes(modTime, contentLen)
     }
 }
