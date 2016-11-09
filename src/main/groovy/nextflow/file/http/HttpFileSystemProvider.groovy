@@ -60,7 +60,7 @@ class HttpFileSystemProvider extends FileSystemProvider {
             throw new IllegalArgumentException("Illegal uri scheme")
         if (httpfs)
             throw new IllegalStateException("File system already exists")
-        httpfs = new HttpFileSystem(uri)
+        httpfs = new HttpFileSystem(this)
         return httpfs
     }
 

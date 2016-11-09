@@ -1,4 +1,5 @@
 .gradle
 .idea
+.nextflow*
 build
 *.iml

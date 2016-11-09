@@ -35,13 +35,18 @@ import java.nio.file.spi.FileSystemProvider
  */
 @CompileStatic
 class HttpFileSystem extends FileSystem {
-    HttpFileSystem(URI uri) {
 
+    static private String PATH_SEPARATOR = '/'
+
+    private HttpFileSystemProvider provider
+
+    HttpFileSystem(HttpFileSystemProvider provider) {
+        this.provider = provider
     }
 
     @Override
     FileSystemProvider provider() {
-        return null
+        return provider
     }
 
     @Override
@@ -51,17 +56,17 @@ class HttpFileSystem extends FileSystem {
 
     @Override
     boolean isOpen() {
-        return false
+        return true
     }
 
     @Override
     boolean isReadOnly() {
-        return false
+        return true
     }
 
     @Override
     String getSeparator() {
-        return null
+        return PATH_SEPARATOR
     }
 
     @Override
@@ -81,7 +86,10 @@ class HttpFileSystem extends FileSystem {
 
     @Override
     Path getPath(String first, String... more) {
-        return null
+        def path = first
+        if( more )
+            path += PATH_SEPARATOR + more.join(PATH_SEPARATOR)
+        return new HttpPath(this,path)
     }
 
     @Override
@@ -91,11 +99,11 @@ class HttpFileSystem extends FileSystem {
 
     @Override
     UserPrincipalLookupService getUserPrincipalLookupService() {
-        return null
+        throw new UnsupportedOperationException('User Principal Lookup Service not supported')
     }
 
     @Override
     WatchService newWatchService() throws IOException {
-        return null
+        throw new UnsupportedOperationException('Watch Service not supported')
     }
 }

@@ -47,11 +47,14 @@ class HttpPath implements Path {
     HttpPath(HttpFileSystem fs, URI uri) {
         this.uri = uri
         this.fs = fs
-        this.path = Paths.get(uri.path)
+        this.path = uri.path ? Paths.get(uri.path) : Paths.get('/')
     }
 
     private HttpPath createHttpPath(String path) {
-        return new HttpPath(fs, new URI("${uri.scheme}://${uri.authority}${path}"))
+        return (uri.authority && path.startsWith('/')
+                ? new HttpPath(fs, new URI("${uri.scheme}://${uri.authority}${path}"))
+                : new HttpPath(fs, new URI(path))
+                )
     }
 
     @Override
@@ -71,27 +74,33 @@ class HttpPath implements Path {
 
     @Override
     Path getFileName() {
-        return path.fileName
+        final result = path?.getFileName()?.toString()
+        return result ? new HttpPath(fs, result) : null
     }
 
     @Override
     Path getParent() {
-        return getRoot().resolve(path.parent)
+        String result = path.parent ? path.parent.toString() : null
+        if( result ) {
+            if( result != '/' ) result += '/'
+            return createHttpPath(result)
+        }
+        return null
     }
 
     @Override
     int getNameCount() {
-        return path.nameCount
+        return path ? path.nameCount : 0
     }
 
     @Override
     Path getName(int index) {
-        return path.getName(index)
+        return new HttpPath(fs, path.getName(index).toString())
     }
 
     @Override
     Path subpath(int beginIndex, int endIndex) {
-        return path.subpath(beginIndex, endIndex)
+        return new HttpPath(fs, path.subpath(beginIndex, endIndex).toString())
     }
 
     @Override
@@ -182,7 +191,28 @@ class HttpPath implements Path {
 
     @Override
     Iterator<Path> iterator() {
-        return null
+        final len = getNameCount()
+        new Iterator<Path>() {
+            int index
+            Path current = len ? getName(index++) : null
+
+            @Override
+            boolean hasNext() {
+                return current != null
+            }
+
+            @Override
+            Path next() {
+                final result = current
+                current = index<len ? getName(index++) : null
+                return result
+            }
+
+            @Override
+            void remove() {
+                throw new UnsupportedOperationException("Remove operation not supported")
+            }
+        }
     }
 
     @Override
@@ -195,11 +225,8 @@ class HttpPath implements Path {
         if (other.class != HttpPath) {
             return false
         }
-        def that = (HttpPath)other
-        if (this.fs != that.fs) {
-            return false
-        }
-        return this.uri == that.uri
+        final that = (HttpPath)other
+        return this.fs == that.fs && this.uri == that.uri
     }
 
     @Override
