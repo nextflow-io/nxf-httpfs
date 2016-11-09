@@ -19,11 +19,13 @@
  */
 
 package nextflow.file.http
+
+import java.nio.charset.Charset
 import java.nio.file.FileSystems
+import java.nio.file.Files
 
 import spock.lang.Specification
 import spock.lang.Stepwise
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -40,6 +42,44 @@ class HttpFilesTests extends Specification {
         then:
         fs instanceof HttpFileSystem
         fs.provider() instanceof HttpFileSystemProvider
+    }
+
+    def 'read a http file ' () {
+        given:
+        def uri = new URI('http://www.nextflow.io/index.html')
+
+        when:
+        def fs = FileSystems.getFileSystem(uri)
+        def path = fs.getPath('http://www.nextflow.io/index.html')
+        then:
+        path instanceof HttpPath
+
+        when:
+        def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
+        then:
+        lines.size()>0
+        lines[0] == '<html>'
+
+//        when:
+//        def bytes = Files.readAllBytes(path)
+//        then:
+//        new String(bytes) == ''
+    }
+
+    def 'should check if a file exits' () {
+
+        given:
+        def uri = new URI('http://www.nextflow.io/index.html')
+        def fs = FileSystems.getFileSystem(uri)
+
+        when:
+        def path1 = fs.getPath('http://www.nextflow.io/index.html')
+        def path2 = fs.getPath('http://www.nextflow.io/unknown')
+        then:
+        Files.exists(path1)
+        Files.size(path1) > 0
+        !Files.exists(path2)
+
     }
 
 }
