@@ -207,7 +207,7 @@ class HttpFileSystemProvider extends FileSystemProvider {
 
     @Override
     void checkAccess(Path path, AccessMode... modes) throws IOException {
-
+        readAttributes(path, HttpFileAttributes)
     }
 
     @Override
@@ -219,7 +219,11 @@ class HttpFileSystemProvider extends FileSystemProvider {
     def <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
         if ( type == BasicFileAttributes || type == HttpFileAttributes) {
             def p = (HttpPath) path
-            return (A)readHttpAttributes(p)
+            def attrs = (A)readHttpAttributes(p)
+            if (attrs == null) {
+                throw new IOException("Unable to access path: ${p.toString()}")
+            }
+            return attrs
         }
         throw new UnsupportedOperationException("Not a valid HTTP file attribute type: $type")
     }
@@ -235,9 +239,12 @@ class HttpFileSystemProvider extends FileSystemProvider {
     }
 
     protected HttpFileAttributes readHttpAttributes(HttpPath path) {
-        def conn = path.toUri().toURL().openConnection()
-        def header = conn.getHeaderFields()
-        readHttpAttributes(header)
+        def conn = (HttpURLConnection)path.toUri().toURL().openConnection()
+        if ( conn.getResponseCode() in [200, 301, 302]) {
+            def header = conn.getHeaderFields()
+            return readHttpAttributes(header)
+        }
+        return null
     }
 
     protected HttpFileAttributes readHttpAttributes(Map<String,List<String>> header) {

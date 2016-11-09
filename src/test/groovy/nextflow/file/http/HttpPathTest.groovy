@@ -170,7 +170,7 @@ class HttpPathTest extends Specification {
         'alpha'                     | 'beta.txt'            | 'alpha/beta.txt'
         '/alpha'                    | 'beta.txt'            | '/alpha/beta.txt'
         'http://nextflow.io/abc/'   | '/z.txt'              | 'http://nextflow.io/z.txt'
-        'http://nextflow.io/abc/'   | 'http://x.com/z.txt'  | 'http://x.com/z.xyz'
+        'http://nextflow.io/abc/'   | 'http://x.com/z.txt'  | 'http://x.com/z.txt'
 
     }
 

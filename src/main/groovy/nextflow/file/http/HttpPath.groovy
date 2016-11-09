@@ -135,7 +135,10 @@ class HttpPath implements Path {
 
     @Override
     Path resolve(String other) {
-        return createHttpPath(path.resolve(other).toString())
+        return ( uri.scheme && other.startsWith(uri.scheme)
+                ? createHttpPath(other.toString())
+                : createHttpPath(path.resolve(other).toString())
+        )
     }
 
     @Override
@@ -145,7 +148,10 @@ class HttpPath implements Path {
 
     @Override
     Path resolveSibling(String other) {
-        return createHttpPath(path.resolveSibling(other).toString())
+        return ( uri.scheme && other.startsWith(uri.scheme)
+                ? createHttpPath(other.toString())
+                : createHttpPath(path.resolveSibling(other).toString())
+        )
     }
 
     @Override

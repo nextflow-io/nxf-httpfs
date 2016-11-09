@@ -74,7 +74,7 @@ class HttpFilesTests extends Specification {
 
         when:
         def path1 = fs.getPath('http://www.nextflow.io/index.html')
-        def path2 = fs.getPath('http://www.nextflow.io/unknown')
+        def path2 = fs.getPath('http://www.google.com/unknown')
         then:
         Files.exists(path1)
         Files.size(path1) > 0
