@@ -23,15 +23,15 @@ import spock.lang.Specification
 /**
  * Created by emilio on 08/11/16.
  */
-class HttpFileSystemProviderTest extends Specification {
+class XFileSystemProviderTest extends Specification {
 
     def "should return input stream"() {
         given:
-        def fs = Mock(HttpFileSystem)
+        def fs = Mock(XFileSystem)
         def fsp = new HttpFileSystemProvider()
 
         when:
-        def stream = fsp.newInputStream(new HttpPath(fs, "http://www.google.com/index.html"))
+        def stream = fsp.newInputStream(new XPath(fs, new URI('http://www.google.com/'), "index.html"))
 
         then:
         stream.text.startsWith("<!doctype html>")
@@ -59,14 +59,14 @@ class HttpFileSystemProviderTest extends Specification {
 
     def "should read file attributes from HttpPath"() {
         given:
-        def fs = Mock(HttpFileSystem)
+        def fs = Mock(XFileSystem)
         def fsp = new HttpFileSystemProvider()
 
         when:
-        def attrs = fsp.readHttpAttributes(new HttpPath(fs, "http://www.nextflow.io/index.html"))
+        def attrs = fsp.readHttpAttributes(new XPath(fs, new URI('http://www.nextflow.io'), "/index.html"))
 
         then:
         attrs.lastModifiedTime() == null
-        attrs.size > 0
+        attrs.size() > 0
     }
 }

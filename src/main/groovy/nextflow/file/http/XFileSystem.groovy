@@ -30,23 +30,33 @@ import java.nio.file.WatchService
 import java.nio.file.attribute.UserPrincipalLookupService
 import java.nio.file.spi.FileSystemProvider
 
+import groovy.transform.PackageScope
+
 /**
  * Created by emilio on 08/11/16.
  */
+@PackageScope
 @CompileStatic
-class HttpFileSystem extends FileSystem {
+class XFileSystem extends FileSystem {
 
     static private String PATH_SEPARATOR = '/'
 
-    private HttpFileSystemProvider provider
+    private XFileSystemProvider provider
 
-    HttpFileSystem(HttpFileSystemProvider provider) {
+    private URI base
+
+    XFileSystem(XFileSystemProvider provider, URI base) {
         this.provider = provider
+        this.base = base
     }
 
     @Override
     FileSystemProvider provider() {
         return provider
+    }
+
+    URI getBaseUri() {
+        return base
     }
 
     @Override
@@ -86,10 +96,7 @@ class HttpFileSystem extends FileSystem {
 
     @Override
     Path getPath(String first, String... more) {
-        def path = first
-        if( more )
-            path += PATH_SEPARATOR + more.join(PATH_SEPARATOR)
-        return new HttpPath(this,path)
+        return new XPath(this,base,first,more)
     }
 
     @Override
@@ -106,4 +113,5 @@ class HttpFileSystem extends FileSystem {
     WatchService newWatchService() throws IOException {
         throw new UnsupportedOperationException('Watch Service not supported')
     }
+
 }

@@ -30,30 +30,39 @@ import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.nio.file.WatchService
 
-/**
- * Created by emilio on 08/11/16.
- */
-@CompileStatic
-class HttpPath implements Path {
+import groovy.transform.PackageScope
 
-    private URI uri
-    private HttpFileSystem fs
+/**
+ * @author Emilio Palumbo
+ * @author Paolo Di Tommaso
+ */
+@PackageScope
+@CompileStatic
+class XPath implements Path {
+
+    private XFileSystem fs
+
+    private URI base
+
     private Path path
 
-    HttpPath(HttpFileSystem fs, String url) {
-        this(fs, new URI(url))
-    }
-
-    HttpPath(HttpFileSystem fs, URI uri) {
-        this.uri = uri
+    XPath(XFileSystem fs, URI base, String path, String... more) {
         this.fs = fs
-        this.path = uri.path ? Paths.get(uri.path) : Paths.get('/')
+        this.base = base
+        this.path = Paths.get(path,more)
     }
 
-    private HttpPath createHttpPath(String path) {
-        return (uri.authority && path.startsWith('/')
-                ? new HttpPath(fs, new URI("${uri.scheme}://${uri.authority}${path}"))
-                : new HttpPath(fs, new URI(path))
+    XPath(XFileSystem fs, String path, String... more) {
+        this.fs = fs
+        this.base = fs.getBaseUri()
+        this.path = Paths.get(path,more)
+    }
+
+
+    private XPath createHttpPath(String path) {
+        return (base && path.startsWith('/')
+                ? new XPath(fs, base, path)
+                : new XPath(fs, null, path)
                 )
     }
 
@@ -64,7 +73,7 @@ class HttpPath implements Path {
 
     @Override
     boolean isAbsolute() {
-        return uri.absolute
+        return path.isAbsolute()
     }
 
     @Override
@@ -75,7 +84,7 @@ class HttpPath implements Path {
     @Override
     Path getFileName() {
         final result = path?.getFileName()?.toString()
-        return result ? new HttpPath(fs, result) : null
+        return result ? new XPath(fs, null, result) : null
     }
 
     @Override
@@ -95,12 +104,12 @@ class HttpPath implements Path {
 
     @Override
     Path getName(int index) {
-        return new HttpPath(fs, path.getName(index).toString())
+        return new XPath(fs, null, path.getName(index).toString())
     }
 
     @Override
     Path subpath(int beginIndex, int endIndex) {
-        return new HttpPath(fs, path.subpath(beginIndex, endIndex).toString())
+        return new XPath(fs, null, path.subpath(beginIndex, endIndex).toString())
     }
 
     @Override
@@ -135,10 +144,7 @@ class HttpPath implements Path {
 
     @Override
     Path resolve(String other) {
-        return ( uri.scheme && other.startsWith(uri.scheme)
-                ? createHttpPath(other.toString())
-                : createHttpPath(path.resolve(other).toString())
-        )
+        null
     }
 
     @Override
@@ -148,21 +154,18 @@ class HttpPath implements Path {
 
     @Override
     Path resolveSibling(String other) {
-        return ( uri.scheme && other.startsWith(uri.scheme)
-                ? createHttpPath(other.toString())
-                : createHttpPath(path.resolveSibling(other).toString())
-        )
+        return null
     }
 
     @Override
     Path relativize(Path other) {
-        def otherPath = ((HttpPath)other).path
+        def otherPath = ((XPath)other).path
         return createHttpPath(path.relativize(otherPath).toString())
     }
 
     @Override
     URI toUri() {
-        return uri
+        base ? new URI("$base$path") : new URI("$path")
     }
 
     @Override
@@ -182,17 +185,17 @@ class HttpPath implements Path {
 
     @Override
     String toString() {
-        return uri.toString()
+        return path.toString()
     }
 
     @Override
     WatchKey register(WatchService watcher, WatchEvent.Kind<?>[] events, WatchEvent.Modifier... modifiers) throws IOException {
-        throw new UnsupportedOperationException("Register not supported by HttpFileSystem")
+        throw new UnsupportedOperationException("Register not supported by XFileSystem")
     }
 
     @Override
     WatchKey register(WatchService watcher, WatchEvent.Kind<?>... events) throws IOException {
-        throw new UnsupportedOperationException("Register not supported by HttpFileSystem")
+        throw new UnsupportedOperationException("Register not supported by XFileSystem")
     }
 
     @Override
@@ -223,20 +226,20 @@ class HttpPath implements Path {
 
     @Override
     int compareTo(Path other) {
-        return this.toString() <=> other.toString()
+        return this.toUri().toString() <=> other.toUri().toString()
     }
 
     @Override
     boolean equals(Object other) {
-        if (other.class != HttpPath) {
+        if (other.class != XPath) {
             return false
         }
-        final that = (HttpPath)other
-        return this.fs == that.fs && this.uri == that.uri
+        final that = (XPath)other
+        return this.fs == that.fs && this.base == that.base && this.path == that.path
     }
 
     @Override
     int hashCode() {
-        return Objects.hash(fs, uri)
+        return Objects.hash(fs,base,path)
     }
 }

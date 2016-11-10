@@ -6,13 +6,13 @@ import groovy.transform.CompileStatic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class HttpFileSystemProvider extends XFileSystemProvider {
 
-    private static final String SCHEME = 'http'
+@CompileStatic
+class HttpsFileSystemProvider extends XFileSystemProvider {
 
     @Override
     String getScheme() {
-        return SCHEME
+        return 'https'
     }
+
 }

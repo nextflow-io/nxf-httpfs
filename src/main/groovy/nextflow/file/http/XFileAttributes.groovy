@@ -23,15 +23,20 @@ package nextflow.file.http
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+
 /**
  * Created by emilio on 08/11/16.
  */
-class HttpFileAttributes implements BasicFileAttributes {
+@PackageScope
+@CompileStatic
+class XFileAttributes implements BasicFileAttributes {
 
     private FileTime lastModifiedTime
     private long size
 
-    HttpFileAttributes(FileTime lastModifiedTime, long size) {
+    XFileAttributes(FileTime lastModifiedTime, long size) {
         this.lastModifiedTime = lastModifiedTime
         this.size = size
     }

@@ -40,8 +40,8 @@ class HttpFilesTests extends Specification {
         when:
         def fs = FileSystems.newFileSystem( uri, [:] )
         then:
-        fs instanceof HttpFileSystem
-        fs.provider() instanceof HttpFileSystemProvider
+        fs instanceof XFileSystem
+        fs.provider() instanceof XFileSystemProvider
     }
 
     def 'read a http file ' () {
@@ -52,7 +52,7 @@ class HttpFilesTests extends Specification {
         def fs = FileSystems.getFileSystem(uri)
         def path = fs.getPath('http://www.nextflow.io/index.html')
         then:
-        path instanceof HttpPath
+        path instanceof XPath
 
         when:
         def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
