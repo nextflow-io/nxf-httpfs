@@ -19,17 +19,16 @@
  */
 
 package nextflow.file.http
-
-import groovy.transform.CompileStatic
-
 import java.nio.file.FileSystem
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.ProviderMismatchException
 import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.nio.file.WatchService
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 
 /**
@@ -49,13 +48,17 @@ class XPath implements Path {
     XPath(XFileSystem fs, URI base, String path, String... more) {
         this.fs = fs
         this.base = base
-        this.path = Paths.get(path,more)
+        this.path = Paths.get(path ?:'/',more)
     }
 
     XPath(XFileSystem fs, String path, String... more) {
+        this(fs, fs.baseUri, path, more)
+    }
+
+    private XPath(XFileSystem fs, Path path) {
         this.fs = fs
-        this.base = fs.getBaseUri()
-        this.path = Paths.get(path,more)
+        this.base = fs?.baseUri
+        this.path = path
     }
 
 
@@ -99,7 +102,7 @@ class XPath implements Path {
 
     @Override
     int getNameCount() {
-        return path ? path.nameCount : 0
+        return path.toString() ? path.nameCount : 0
     }
 
     @Override
@@ -139,22 +142,51 @@ class XPath implements Path {
 
     @Override
     Path resolve(Path other) {
-        return resolve(other.toString())
+        if( this.class != other.class )
+            throw new ProviderMismatchException()
+
+        def that = (XPath)other
+
+        if( that.base && this.base != that.base )
+            return other
+
+        else if( that.path ) {
+            def newPath = this.path.resolve(that.path)
+            return new XPath(fs, newPath)
+        }
+        else {
+            return this
+        }
+
     }
 
     @Override
     Path resolve(String other) {
-        null
+        resolve(get(other))
     }
 
     @Override
     Path resolveSibling(Path other) {
-        return resolveSibling(other.toString())
+        if( this.class != other.class )
+            throw new ProviderMismatchException()
+
+        def that = (XPath)other
+
+        if( that.base && this.base != that.base )
+            return other
+
+        if( that.path ) {
+            def newPath = this.path.resolveSibling(that.path)
+            return newPath.isAbsolute() ? new XPath(fs, newPath) : new XPath(null, newPath)
+        }
+        else {
+            return this
+        }
     }
 
     @Override
     Path resolveSibling(String other) {
-        return null
+        resolveSibling(get(other))
     }
 
     @Override
@@ -241,5 +273,18 @@ class XPath implements Path {
     @Override
     int hashCode() {
         return Objects.hash(fs,base,path)
+    }
+
+
+    static XPath get(String str) {
+        if( str == null )
+            return null
+
+        def uri = new URI(null,null,str,null,null)
+
+        if( uri.scheme && !XFileSystemProvider.ALL_SCHEMES.contains(uri.scheme))
+            throw new ProviderMismatchException()
+
+        uri.authority ? (XPath)Paths.get(uri) : new XPath(null, null, str)
     }
 }

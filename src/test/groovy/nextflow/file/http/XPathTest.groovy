@@ -21,51 +21,22 @@
 package nextflow.file.http
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
- * Created by emilio on 08/11/16.
+ * @author Emilio Palumbo
+ * @author Paolo DiTommaso
+ *
  */
 class XPathTest extends Specification {
 
-    FtpFileSystemProvider ftpProvider
-
-    HttpFileSystemProvider httpProvider
-
-    HttpsFileSystemProvider httpsProvider
-
-
-    def path( String str ) {
-        if( str.startsWith('http:') ) {
-            if(!httpProvider) httpProvider = new HttpFileSystemProvider()
-            return httpProvider.getPath(str)
-        }
-
-        if( str.startsWith('https:')) {
-            if(!httpsProvider) httpsProvider = new HttpsFileSystemProvider()
-            return httpsProvider.getPath(str)
-        }
-
-        if( str.startsWith('ftp:')) {
-            if(!ftpProvider) ftpProvider = new FtpFileSystemProvider()
-            return ftpProvider.getPath(str)
-        }
-
-        throw new IllegalArgumentException('Not a valid URI scheme')
-    }
-
     def 'should validate equals and hashCode' () {
-        given:
-        def fs = Mock(XFileSystem)
-        fs.getBaseUri() >> new URI('')
-
-        def fs2 = Mock(XFileSystem)
-        fs2.getBaseUri() >> new URI('http://www.google.com')
 
         when:
-        def p1 = path('http://www.nextflow.io/a/b/c.txt')
-        def p2 = path('http://www.nextflow.io/a/b/c.txt')
-        def p3 = path('http://www.nextflow.io/z.txt')
-        def p4 = path('http://www.google.com/a/b/c.txt')
+        def p1 = XPath.get('http://www.nextflow.io/a/b/c.txt')
+        def p2 = XPath.get('http://www.nextflow.io/a/b/c.txt')
+        def p3 = XPath.get('http://www.nextflow.io/z.txt')
+        def p4 = XPath.get('http://www.google.com/a/b/c.txt')
 
         then:
         p1 == p2
@@ -81,132 +52,115 @@ class XPathTest extends Specification {
 
 
     def 'should convert to a string' () {
-        given:
-        def fs = Mock(XFileSystem)
-        fs.getBaseUri() >> new URI('http://www.nextflow.io')
-
         expect:
-        new XPath(fs, '/abc/d.txt').toString()== 'http://www.nextflow.io/abc/d.txt'
-        new XPath(fs, '/abc/d.txt').toUri() == new URI('http://www.nextflow.io/abc/d.txt')
-        new XPath(fs, '/abc/d.txt').toUri().toString()== 'http://www.nextflow.io/abc/d.txt'
+        XPath.get('http://www.nextflow.io/abc/d.txt').toString()== '/abc/d.txt'
+        XPath.get('http://www.nextflow.io/abc/d.txt').toUri() == new URI('http://www.nextflow.io/abc/d.txt')
+        XPath.get('http://www.nextflow.io/abc/d.txt').toUri().toString()== 'http://www.nextflow.io/abc/d.txt'
     }
 
     def "should return url root"() {
 
-        given:
-        def fs = Mock(XFileSystem)
-        fs.getBaseUri() >> new URI('http://www.google.com')
-
-        def fs2 = Mock(XFileSystem)
-        fs2.getBaseUri() >> new URI('http://www.nextflow.io')
-
-        def p = new XPath(fs, "/a/b/c")
-
         expect:
-        p.getRoot() == new XPath(fs, "/")
-        p.getRoot().toUri().toString() == 'http://www.google.com/'
-        p.getRoot() != fs2.getPath('/')
+        XPath.get(origin).getRoot() == XPath.get(root)
+        XPath.get(origin).getRoot().toString() == '/'
+        XPath.get(origin).getRoot().toUri() == new URI(uri)
 
+        where:
+        origin                              | root                      | path      | uri
+        'http://www.google.com/abc.txt'     | 'http://www.google.com/'  | '/'       | 'http://www.google.com/'
+        'http://www.google.com/'            | 'http://www.google.com/'  | '/'       | 'http://www.google.com/'
+        'http://www.google.com'             | 'http://www.google.com/'  | '/'       | 'http://www.google.com/'
     }
+
 
     def 'should return file name from url' () {
 
-        given:
-        def fs = Mock(XFileSystem)
-        fs.getBaseUri() >> new URI('http://nextflow.io')
+        expect:
+        XPath.get(origin)?.getFileName() == XPath.get(fileName)
+        XPath.get(origin)?.getFileName()?.toString() == fileName
 
-        when:
-        def file1 = new XPath(fs, '/a/b/c.txt').getFileName()
-        then:
-        file1 instanceof XPath
-        file1 == new XPath(fs, null, 'c.txt')
-        file1.toString() == 'c.txt'
-
-        when:
-        def file2 = new XPath(fs, '/').getFileName()
-        then:
-        file2 == null
-
-        when:
-        def file3 = new XPath(fs, '').getFileName()
-        then:
-        file3 == null
-
+        where:
+        origin                          | fileName
+        'http://nextflow.io/a/b/c.txt'  | 'c.txt'
+        'http://nextflow.io/alpha'      | 'alpha'
+        'http://nextflow.io/'           | null
+        'http://nextflow.io'            | null
     }
 
 
     def 'should return if it is an absolute path'() {
 
-        given:
-        def fs = Mock(XFileSystem)
-        fs.getBaseUri() >> new URI('http://nextflow.io')
-
         expect:
-        new XPath(fs, '/a/b/c.txt').isAbsolute()
-        new XPath(fs, '/a/b/').isAbsolute()
-        !new XPath(fs, '/a/b/c.txt').getFileName().isAbsolute()
+        XPath.get(origin).isAbsolute() == expected
+
+        where:
+        origin                          | expected
+        'http://nextflow.io/a/b/c.txt'  | true
+        'http://nextflow.io/a/b/'       | true
+        'name.txt'                      | false
 
     }
 
     def 'should return parent path' () {
 
-        given:
-
-
         expect:
-        new XPath(fs, 'http://nextflow.io/a/b/c.txt').getParent() == new XPath(fs, 'http://nextflow.io/a/b/')
-        new XPath(fs, 'http://nextflow.io/a/').getParent() == new XPath(fs, 'http://nextflow.io/')
-        new XPath(fs, 'http://nextflow.io/a').getParent() == new XPath(fs, 'http://nextflow.io/')
-        new XPath(fs, 'http://nextflow.io/').getParent() == null
+        XPath.get(origin).getParent() == XPath.get(parent)
+
+        where:
+        origin                          | parent
+        'http://nextflow.io/a/b/c.txt'  | 'http://nextflow.io/a/b/'
+        'http://nextflow.io/a/'         | 'http://nextflow.io/'
+        'http://nextflow.io/a'          | 'http://nextflow.io/'
+        'http://nextflow.io/'           | null
     }
 
-    def 'should return name count' () {
 
-        given:
-        def fs = Mock(XFileSystem)
+    @Unroll
+    def 'should return name count #origin' () {
 
         expect:
-        new XPath(fs, 'http://nextflow.io/a/b/c.txt').getNameCount() == 3
-        new XPath(fs, 'http://nextflow.io/a/b/c.txt').getFileName().getNameCount() == 1
-        new XPath(fs, 'http://nextflow.io/a/b/').getNameCount() == 2
-        new XPath(fs, 'http://nextflow.io/a/b').getNameCount() == 2
-        new XPath(fs, 'http://nextflow.io/a/').getNameCount() == 1
-        new XPath(fs, 'http://nextflow.io/').getNameCount() == 0
-        new XPath(fs, 'http://nextflow.io').getNameCount() == 0
+        XPath.get(origin).getNameCount() == count
+
+        where:
+        origin                          | count
+        'http://nextflow.io/a/b/c.txt'  | 3
+        'http://nextflow.io/a/b/'       | 2
+        'http://nextflow.io/a/b'        | 2
+        'http://nextflow.io/a/'         | 1
+        'http://nextflow.io/'           | 0
+        'http://nextflow.io'            | 0
+        'hello/world'                   | 2
+        'hello'                         | 1
+
     }
 
     def 'should return name part by index' () {
-        given:
-        def fs = Mock(XFileSystem)
-
         expect:
-        new XPath(fs, 'http://nextflow.io/a/b/c.txt').getName(0) == new XPath(fs, 'a')
-        new XPath(fs, 'http://nextflow.io/a/b/c.txt').getName(1) == new XPath(fs, 'b')
-        new XPath(fs, 'http://nextflow.io/a/b/c.txt').getName(2) == new XPath(fs, 'c.txt')
+        XPath.get('http://nextflow.io/a/b/c.txt').getName(0) == XPath.get('a')
+        XPath.get('http://nextflow.io/a/b/c.txt').getName(1) == XPath.get('b')
+        XPath.get('http://nextflow.io/a/b/c.txt').getName(2) == XPath.get('c.txt')
 
         when:
-        new XPath(fs, 'http://nextflow.io/a/b/c.txt').getName(3)
+        XPath.get('http://nextflow.io/a/b/c.txt').getName(3)
         then:
         thrown(IllegalArgumentException)
 
     }
 
     def 'should return a subpath' () {
-        given:
-        def fs = Mock(XFileSystem)
+
         expect:
-        new XPath(fs, 'http://nextflow.io/a/b/c/d.txt').subpath(0,3) == new XPath(fs, 'a/b/c' )
-        new XPath(fs, 'http://nextflow.io/a/b/c/d.txt').subpath(1,3) == new XPath(fs, 'b/c' )
-        new XPath(fs, 'http://nextflow.io/a/b/c/d.txt').subpath(3,4) == new XPath(fs, 'd.txt' )
+        XPath.get('http://nextflow.io/a/b/c/d.txt').subpath(0,3) == XPath.get('a/b/c' )
+        XPath.get('http://nextflow.io/a/b/c/d.txt').subpath(1,3) == XPath.get('b/c' )
+        XPath.get('http://nextflow.io/a/b/c/d.txt').subpath(3,4) == XPath.get('d.txt' )
     }
 
-    def 'should resolve a path' () {
-        given:
-        def fs = Mock(XFileSystem)
+    @Unroll
+    def 'should resolve a path: #base' () {
 
         expect:
-        new XPath(fs, base).resolve(ext) == new XPath(fs,expected)
-        new XPath(fs, base).resolve(new XPath(fs,ext)) == new XPath(fs,expected)
+        XPath.get(base).resolve(ext) == XPath.get(expected)
+        XPath.get(base).resolve(XPath.get(ext)) == XPath.get(expected)
 
         where:
         base                        | ext                   | expected
@@ -221,13 +175,12 @@ class XPathTest extends Specification {
 
     }
 
-    def 'should resolve sibling' () {
-        given:
-        def fs = Mock(XFileSystem)
+    @Unroll
+    def 'should resolve sibling: #base' () {
 
         expect:
-        new XPath(fs, base).resolveSibling(ext) == new XPath(fs,expected)
-        new XPath(fs, base).resolveSibling(new XPath(fs,ext)) == new XPath(fs,expected)
+        XPath.get(base).resolveSibling(ext) == XPath.get(expected)
+        XPath.get(base).resolveSibling(XPath.get(ext)) == XPath.get(expected)
 
         where:
         base                         | ext           | expected
@@ -241,18 +194,16 @@ class XPathTest extends Specification {
     }
 
     def 'should iterate over a path' () {
-        given:
-        def fs = Mock(XFileSystem)
 
         when:
-        def itr = new XPath(fs, 'http://nextflow.io/a/b/c.txt').iterator()
+        def itr = XPath.get('http://nextflow.io/a/b/c.txt').iterator()
         then:
         itr.hasNext()
-        itr.next() == new XPath(fs,'a')
+        itr.next() == XPath.get('a')
         itr.hasNext()
-        itr.next() == new XPath(fs,'b')
+        itr.next() == XPath.get('b')
         itr.hasNext()
-        itr.next() == new XPath(fs,'c.txt')
+        itr.next() == XPath.get('c.txt')
         !itr.hasNext()
         itr.next() == null
     }

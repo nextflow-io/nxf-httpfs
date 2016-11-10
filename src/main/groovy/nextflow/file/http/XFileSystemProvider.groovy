@@ -41,7 +41,6 @@ import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-
 /**
  * Created by emilio on 08/11/16.
  */
@@ -51,51 +50,86 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     private Map<URI, FileSystem> fileSystemMap = [:]
 
+    static public Set<String> ALL_SCHEMES = ['ftp','http','https'] as Set
+
     private URI key(String s, String a) {
         new URI("$s://$a")
     }
 
     private URI key(URI uri) {
-        new URI("${uri.scheme}://${uri.authority}")
+        key(uri.scheme.toLowerCase(), uri.authority.toLowerCase())
     }
 
     @Override
     FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
         final scheme = uri.scheme.toLowerCase()
-        final authority = uri.authority.toLowerCase()
 
         if( scheme != this.getScheme() )
             throw new IllegalArgumentException("Not a valid ${getScheme().toUpperCase()} scheme: $scheme")
 
-        final base = key(scheme,authority)
+        final base = key(uri)
         if (fileSystemMap.containsKey(base))
             throw new IllegalStateException("File system `$base` already exists")
+
         def result = new XFileSystem(this, base)
         fileSystemMap[base] = result
         return result
     }
 
+    /**
+     * Returns an existing {@code FileSystem} created by this provider.
+     *
+     * <p> This method returns a reference to a {@code FileSystem} that was
+     * created by invoking the {@link #newFileSystem(URI,Map) newFileSystem(URI,Map)}
+     * method. File systems created the {@link #newFileSystem(Path,Map)
+     * newFileSystem(Path,Map)} method are not returned by this method.
+     * The file system is identified by its {@code URI}. Its exact form
+     * is highly provider dependent. In the case of the default provider the URI's
+     * path component is {@code "/"} and the authority, query and fragment components
+     * are undefined (Undefined components are represented by {@code null}).
+     *
+     * @param   uri
+     *          URI reference
+     *
+     * @return  The file system
+     *
+     * @throws  IllegalArgumentException
+     *          If the pre-conditions for the {@code uri} parameter aren't met
+     * @throws  FileSystemNotFoundException
+     *          If the file system does not exist
+     * @throws  SecurityException
+     *          If a security manager is installed and it denies an unspecified
+     *          permission.
+     */
     @Override
     FileSystem getFileSystem(URI uri) {
+        getFileSystem(uri,false)
+    }
+
+    FileSystem getFileSystem(URI uri, boolean canCreate) {
         assert fileSystemMap != null
 
         def scheme = uri.scheme.toLowerCase()
-        def authority = uri.authority.toLowerCase()
 
         if( scheme != this.getScheme() )
             throw new IllegalArgumentException("Not a valid ${getScheme().toUpperCase()} scheme: $scheme")
 
-        def key = new URI("$scheme://$authority")
-        def result = fileSystemMap[key]
-        if( !result )
-            throw new FileSystemNotFoundException("File system not found: $key")
+        def key = key(uri)
+
+        FileSystem result = fileSystemMap[key]
+        if( !result ) {
+            if( canCreate )
+                result = newFileSystem(uri,Collections.emptyMap())
+            else
+                throw new FileSystemNotFoundException("File system not found: $key")
+        }
 
         return result
     }
 
     @Override
     Path getPath(URI uri) {
-        return getFileSystem(uri).getPath(uri.path)
+        return getFileSystem(uri,true).getPath(uri.path)
     }
 
     @Override
@@ -278,13 +312,13 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     }
 
 
-    XPath getPath(String str) {
-        def uri = new URI(str)
+    FileSystem getOrCreateFileSystem(URI uri) {
 
-        if( !fileSystemMap.containsKey(key(uri)) ) {
-            newFileSystem(uri,[:])
+        def k = key(uri)
+        if( !fileSystemMap.containsKey(k) ) {
+            return newFileSystem(uri,[:])
         }
 
-        return (XPath)getPath(uri)
+        return fileSystemMap[k]
     }
 }
