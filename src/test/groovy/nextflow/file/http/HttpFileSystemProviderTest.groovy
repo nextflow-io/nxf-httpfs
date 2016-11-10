@@ -47,7 +47,14 @@ class HttpFileSystemProviderTest extends Specification {
 
         then:
         attrs.lastModifiedTime().toString() == '2016-11-04T21:50:34Z'
-        attrs.size == 21729
+        attrs.size() == 21729
+
+
+        when:
+        attrs = fs.readHttpAttributes([:])
+        then:
+        attrs.lastModifiedTime() == null
+        attrs.size() == 0
     }
 
     def "should read file attributes from HttpPath"() {
