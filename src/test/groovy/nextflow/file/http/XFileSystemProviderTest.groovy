@@ -27,12 +27,10 @@ class XFileSystemProviderTest extends Specification {
 
     def "should return input stream"() {
         given:
-        def fs = Mock(XFileSystem)
         def fsp = new HttpFileSystemProvider()
-
+        def path = fsp.getPath(new URI('http://www.google.com/index.html'))
         when:
-        def stream = fsp.newInputStream(new XPath(fs, new URI('http://www.google.com/'), "index.html"))
-
+        def stream = fsp.newInputStream(path)
         then:
         stream.text.startsWith("<!doctype html>")
     }
@@ -44,11 +42,9 @@ class XFileSystemProviderTest extends Specification {
 
         when:
         def attrs = fs.readHttpAttributes(attrMap)
-
         then:
         attrs.lastModifiedTime().toString() == '2016-11-04T21:50:34Z'
         attrs.size() == 21729
-
 
         when:
         attrs = fs.readHttpAttributes([:])
@@ -59,12 +55,11 @@ class XFileSystemProviderTest extends Specification {
 
     def "should read file attributes from HttpPath"() {
         given:
-        def fs = Mock(XFileSystem)
         def fsp = new HttpFileSystemProvider()
+        def path = (XPath)fsp.getPath(new URI('http://www.nextflow.io/index.html'))
 
         when:
-        def attrs = fsp.readHttpAttributes(new XPath(fs, new URI('http://www.nextflow.io'), "/index.html"))
-
+        def attrs = fsp.readHttpAttributes(path)
         then:
         attrs.lastModifiedTime() == null
         attrs.size() > 0

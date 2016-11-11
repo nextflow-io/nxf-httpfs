@@ -52,11 +52,11 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     static public Set<String> ALL_SCHEMES = ['ftp','http','https'] as Set
 
-    private URI key(String s, String a) {
+    static private URI key(String s, String a) {
         new URI("$s://$a")
     }
 
-    private URI key(URI uri) {
+    static private URI key(URI uri) {
         key(uri.scheme.toLowerCase(), uri.authority.toLowerCase())
     }
 
@@ -134,7 +134,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     @Override
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        throw new UnsupportedOperationException("NewByteChannel not supported by XFileSystem")
+        throw new UnsupportedOperationException("NewByteChannel not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     /**
@@ -218,32 +218,32 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     public OutputStream newOutputStream(Path path, OpenOption... options)
             throws IOException
     {
-        throw new UnsupportedOperationException("Write not supported by XFileSystem")
+        throw new UnsupportedOperationException("Write not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override
     DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
-        throw new UnsupportedOperationException("Direcotry listing unsupported by XFileSystem")
+        throw new UnsupportedOperationException("Direcotry listing unsupported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override
     void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-        throw new UnsupportedOperationException("Create directory unsupportedby XFileSystem")
+        throw new UnsupportedOperationException("Create directory not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override
     void delete(Path path) throws IOException {
-        throw new UnsupportedOperationException("Delete unsupported by XFileSystem")
+        throw new UnsupportedOperationException("Delete not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override
     void copy(Path source, Path target, CopyOption... options) throws IOException {
-
+        throw new UnsupportedOperationException("Copy not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override
     void move(Path source, Path target, CopyOption... options) throws IOException {
-        throw new UnsupportedOperationException("Move not supported by XFileSystem")
+        throw new UnsupportedOperationException("Move not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override
@@ -258,7 +258,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     @Override
     FileStore getFileStore(Path path) throws IOException {
-        throw new UnsupportedOperationException("File store not supported by XFileSystem")
+        throw new UnsupportedOperationException("File store not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override
@@ -281,17 +281,17 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             }
             return attrs
         }
-        throw new UnsupportedOperationException("Not a valid HTTP file attribute type: $type")
+        throw new UnsupportedOperationException("Not a valid ${getScheme().toUpperCase()} file attribute type: $type")
     }
 
     @Override
     Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        throw new UnsupportedOperationException("Read file attributes no supported by XFileSystem")
+        throw new UnsupportedOperationException("Read file attributes no supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override
     void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
-        throw new UnsupportedOperationException("Set file attributes not supported by XFileSystem")
+        throw new UnsupportedOperationException("Set file attributes not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     protected XFileAttributes readHttpAttributes(XPath path) {
@@ -311,14 +311,4 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         new XFileAttributes(modTime, contentLen)
     }
 
-
-    FileSystem getOrCreateFileSystem(URI uri) {
-
-        def k = key(uri)
-        if( !fileSystemMap.containsKey(k) ) {
-            return newFileSystem(uri,[:])
-        }
-
-        return fileSystemMap[k]
-    }
 }

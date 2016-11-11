@@ -23,6 +23,7 @@ package nextflow.file.http
 import java.nio.charset.Charset
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.Paths
 
 import spock.lang.Specification
 import spock.lang.Stepwise
@@ -36,21 +37,19 @@ class HttpFilesTests extends Specification {
     def 'should create a new file system ' () {
 
         given:
-        def uri = new URI('http://www.google.com/index.html')
+        def uri = new URI('http://www.nextflow.io/index.html')
         when:
         def fs = FileSystems.newFileSystem( uri, [:] )
         then:
         fs instanceof XFileSystem
-        fs.provider() instanceof XFileSystemProvider
+        fs.provider() instanceof HttpFileSystemProvider
     }
 
     def 'read a http file ' () {
         given:
         def uri = new URI('http://www.nextflow.io/index.html')
-
         when:
-        def fs = FileSystems.getFileSystem(uri)
-        def path = fs.getPath('http://www.nextflow.io/index.html')
+        def path = Paths.get(uri)
         then:
         path instanceof XPath
 
@@ -68,13 +67,9 @@ class HttpFilesTests extends Specification {
 
     def 'should check if a file exits' () {
 
-        given:
-        def uri = new URI('http://www.nextflow.io/index.html')
-        def fs = FileSystems.getFileSystem(uri)
-
         when:
-        def path1 = fs.getPath('http://www.nextflow.io/index.html')
-        def path2 = fs.getPath('http://www.google.com/unknown')
+        def path1 = Paths.get(new URI('http://www.nextflow.io/index.html'))
+        def path2 = Paths.get(new URI('http://www.google.com/unknown'))
         then:
         Files.exists(path1)
         Files.size(path1) > 0
