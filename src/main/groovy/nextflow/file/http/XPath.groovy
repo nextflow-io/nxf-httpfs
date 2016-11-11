@@ -39,13 +39,19 @@ import groovy.transform.PackageScope
 @CompileStatic
 class XPath implements Path {
 
+    private static final String[] EMPTY = []
+
     private XFileSystem fs
 
     private Path path
 
-    XPath(XFileSystem fs, String path, String... more) {
+    XPath(XFileSystem fs, String path) {
+        this(fs, path, EMPTY)
+    }
+
+    XPath(XFileSystem fs, String path, String[] more) {
         this.fs = fs
-        this.path = Paths.get(path ?:'/',more)
+        this.path = Paths.get(path ?:'/', more)
     }
 
     private XPath(XFileSystem fs, Path path) {
