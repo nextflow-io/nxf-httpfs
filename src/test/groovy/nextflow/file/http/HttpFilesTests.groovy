@@ -20,6 +20,10 @@
 
 package nextflow.file.http
 
+import com.github.tomakehurst.wiremock.junit.WireMockRule
+import com.github.tomjankes.wiremock.WireMockGroovy
+import org.junit.Rule
+
 import java.nio.charset.Charset
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -28,14 +32,47 @@ import java.nio.file.Paths
 import spock.lang.Specification
 import spock.lang.Stepwise
 
-import java.nio.file.spi.FileSystemProvider
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Stepwise
 class HttpFilesTests extends Specification {
+
+    @Rule
+    WireMockRule wireMockRule = new WireMockRule(18080)
+
+    def wireMock = new WireMockGroovy(18080)
+
+    def 'should read http file from WireMock' () {
+
+        given:
+        wireMock.stub {
+            request {
+                method "GET"
+                url "/index.html"
+            }
+            response {
+                status 200
+                body """a
+                 b
+                 c
+                 d
+                 """
+                headers {
+                    "Content-Type" "text/html"
+                    "Content-Length" "10"
+                    "Last-Modified" "Fri, 04 Nov 2016 21:50:34 GMT"
+                }
+            }
+        }
+
+        when:
+        def path = Paths.get(new URI('http://localhost:18080/index.html'))
+        then:
+        Files.size(path) == 10
+        Files.getLastModifiedTime(path).toString() == "2016-11-04T21:50:34Z"
+    }
 
     def 'should create a new file system ' () {
 
