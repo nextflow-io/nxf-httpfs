@@ -51,6 +51,18 @@ class XFileSystem extends FileSystem {
     }
 
     @Override
+    boolean equals( Object other ) {
+        if( this.class != other.class ) return false
+        final that = (XFileSystem)other
+        this.provider == that.provider && this.base == that.base
+    }
+
+    @Override
+    int hashCode() {
+        Objects.hash(provider,base)
+    }
+
+    @Override
     FileSystemProvider provider() {
         return provider
     }
@@ -96,7 +108,7 @@ class XFileSystem extends FileSystem {
 
     @Override
     Path getPath(String first, String... more) {
-        return new XPath(this,base,first,more)
+        return new XPath(this,first,more)
     }
 
     @Override

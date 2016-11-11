@@ -41,32 +41,24 @@ class XPath implements Path {
 
     private XFileSystem fs
 
-    private URI base
-
     private Path path
 
-    XPath(XFileSystem fs, URI base, String path, String... more) {
-        this.fs = fs
-        this.base = base
-        this.path = Paths.get(path ?:'/',more)
-    }
-
     XPath(XFileSystem fs, String path, String... more) {
-        this(fs, fs.baseUri, path, more)
+        this.fs = fs
+        this.path = Paths.get(path ?:'/',more)
     }
 
     private XPath(XFileSystem fs, Path path) {
         this.fs = fs
-        this.base = fs?.baseUri
         this.path = path
     }
 
+    private getBase() {
+        fs?.getBaseUri()
+    }
 
     private XPath createHttpPath(String path) {
-        return (base && path.startsWith('/')
-                ? new XPath(fs, base, path)
-                : new XPath(fs, null, path)
-                )
+        fs && path.startsWith('/') ? new XPath(fs, path) : new XPath(null, path)
     }
 
     @Override
@@ -87,7 +79,7 @@ class XPath implements Path {
     @Override
     Path getFileName() {
         final result = path?.getFileName()?.toString()
-        return result ? new XPath(fs, null, result) : null
+        return result ? new XPath(null, result) : null
     }
 
     @Override
@@ -107,12 +99,12 @@ class XPath implements Path {
 
     @Override
     Path getName(int index) {
-        return new XPath(fs, null, path.getName(index).toString())
+        return new XPath(null, path.getName(index).toString())
     }
 
     @Override
     Path subpath(int beginIndex, int endIndex) {
-        return new XPath(fs, null, path.subpath(beginIndex, endIndex).toString())
+        return new XPath(null, path.subpath(beginIndex, endIndex).toString())
     }
 
     @Override
@@ -147,7 +139,7 @@ class XPath implements Path {
 
         def that = (XPath)other
 
-        if( that.base && this.base != that.base )
+        if( that.fs && this.fs != that.fs )
             return other
 
         else if( that.path ) {
@@ -172,7 +164,7 @@ class XPath implements Path {
 
         def that = (XPath)other
 
-        if( that.base && this.base != that.base )
+        if( that.fs && this.fs != that.fs )
             return other
 
         if( that.path ) {
@@ -267,12 +259,12 @@ class XPath implements Path {
             return false
         }
         final that = (XPath)other
-        return this.fs == that.fs && this.base == that.base && this.path == that.path
+        return this.fs == that.fs && this.path == that.path
     }
 
     @Override
     int hashCode() {
-        return Objects.hash(fs,base,path)
+        return Objects.hash(fs,path)
     }
 
 
@@ -285,6 +277,6 @@ class XPath implements Path {
         if( uri.scheme && !XFileSystemProvider.ALL_SCHEMES.contains(uri.scheme))
             throw new ProviderMismatchException()
 
-        uri.authority ? (XPath)Paths.get(uri) : new XPath(null, null, str)
+        uri.authority ? (XPath)Paths.get(uri) : new XPath(null, str)
     }
 }
