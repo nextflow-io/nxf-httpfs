@@ -27,6 +27,9 @@ import java.nio.file.Paths
 
 import spock.lang.Specification
 import spock.lang.Stepwise
+
+import java.nio.file.spi.FileSystemProvider
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -43,6 +46,17 @@ class HttpFilesTests extends Specification {
         then:
         fs instanceof XFileSystem
         fs.provider() instanceof HttpFileSystemProvider
+    }
+
+    def 'should not create am existing file system ' () {
+
+        given:
+        def uri = new URI('http://www.nextflow.io/index.html')
+        when:
+        def fs = FileSystems.newFileSystem( uri, [:] )
+        then:
+        def ex = thrown(IllegalStateException)
+        ex.message == "File system `http://www.nextflow.io` already exists"
     }
 
     def 'read a http file ' () {
