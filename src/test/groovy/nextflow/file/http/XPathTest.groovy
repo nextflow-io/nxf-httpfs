@@ -193,6 +193,18 @@ class XPathTest extends Specification {
         'http://nextflow.io/abc/'    | 'http://x.com/z.txt'  | 'http://x.com/z.txt'
     }
 
+    def 'should normalise a path: #base' () {
+        expect:
+        XPath.get(path).normalize() == XPath.get(expected)
+
+        where:
+        path                                | expected
+        'http://nextflow.io/ab/c.txt'       | 'http://nextflow.io/ab/c.txt'
+        'http://nextflow.io/ab/c/../d.txt'  | 'http://nextflow.io/ab/d.txt'
+        'ab/c/../d.txt'                     | 'ab/d.txt'
+
+    }
+
     def 'should iterate over a path' () {
 
         when:

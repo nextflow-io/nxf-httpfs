@@ -19,7 +19,10 @@
  */
 
 package nextflow.file.http
+
+import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
+import java.nio.file.AccessDeniedException
 import java.nio.file.AccessMode
 import java.nio.file.CopyOption
 import java.nio.file.DirectoryStream
@@ -30,6 +33,7 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.OpenOption
 import java.nio.file.Path
+import java.nio.file.ProviderMismatchException
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
@@ -42,7 +46,10 @@ import java.util.concurrent.TimeUnit
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 /**
- * Created by emilio on 08/11/16.
+ * Implements a read-only JSR-203 complaint file system provider for http/ftp protocols
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Emilio Palumbo <emiliopalumbo@gmail.com>
  */
 @PackageScope
 @CompileStatic
@@ -134,7 +141,73 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     @Override
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        throw new UnsupportedOperationException("NewByteChannel not supported by ${getScheme().toUpperCase()} file system provider")
+
+        if (path.class != XPath)
+            throw new ProviderMismatchException()
+
+        if (options.size() > 0) {
+            for (OpenOption opt: options) {
+                // All OpenOption values except for APPEND and WRITE are allowed
+                if (opt == StandardOpenOption.APPEND ||
+                        opt == StandardOpenOption.WRITE)
+                    throw new UnsupportedOperationException("'$opt' not allowed");
+            }
+        }
+
+        final connection = new URL(path.toUri().toString()).openConnection()
+        final size = connection.getContentLengthLong()
+        final stream = connection.getInputStream()
+
+        new SeekableByteChannel() {
+
+            private long _position
+
+            @Override
+            int read(ByteBuffer buffer) throws IOException {
+                def data
+                int len=0
+                while( (data=stream.read())!=-1 && len<buffer.capacity()) {
+                    buffer.put(len++, (byte)data)
+                }
+                _position += len
+                return len
+            }
+
+            @Override
+            int write(ByteBuffer src) throws IOException {
+                throw new UnsupportedOperationException("Write operation not supported")
+            }
+
+            @Override
+            long position() throws IOException {
+                return _position
+            }
+
+            @Override
+            SeekableByteChannel position(long newPosition) throws IOException {
+                throw new UnsupportedOperationException("Position operation not supported")
+            }
+
+            @Override
+            long size() throws IOException {
+                return size
+            }
+
+            @Override
+            SeekableByteChannel truncate(long unused) throws IOException {
+                throw new UnsupportedOperationException("Truncate operation not supported")
+            }
+
+            @Override
+            boolean isOpen() {
+                return true
+            }
+
+            @Override
+            void close() throws IOException {
+                stream.close()
+            }
+        }
     }
 
     /**
@@ -169,17 +242,18 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     public InputStream newInputStream(Path path, OpenOption... options)
             throws IOException
     {
-        if (path.class != XPath) {
-            throw new IllegalArgumentException("Illegal path")
-        }
+        if (path.class != XPath)
+            throw new ProviderMismatchException()
+
         if (options.length > 0) {
             for (OpenOption opt: options) {
                 // All OpenOption values except for APPEND and WRITE are allowed
                 if (opt == StandardOpenOption.APPEND ||
                         opt == StandardOpenOption.WRITE)
-                    throw new UnsupportedOperationException("'" + opt + "' not allowed");
+                    throw new UnsupportedOperationException("'$opt' not allowed");
             }
         }
+
         return new URL(path.toUri().toString()).newInputStream()
     }
 
@@ -264,6 +338,13 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     @Override
     void checkAccess(Path path, AccessMode... modes) throws IOException {
         readAttributes(path, XFileAttributes)
+
+        for( AccessMode m : modes ) {
+            if( m == AccessMode.WRITE )
+                throw new AccessDeniedException("Write mode not supported")
+            if( m == AccessMode.EXECUTE )
+                throw new AccessDeniedException("Execute mode not supported")
+        }
     }
 
     @Override
@@ -295,7 +376,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     }
 
     protected XFileAttributes readHttpAttributes(XPath path) {
-        def conn = (HttpURLConnection)path.toUri().toURL().openConnection()
+        final conn = (HttpURLConnection)path.toUri().toURL().openConnection()
         if ( conn.getResponseCode() in [200, 301, 302]) {
             def header = conn.getHeaderFields()
             return readHttpAttributes(header)

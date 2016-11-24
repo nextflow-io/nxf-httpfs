@@ -32,8 +32,10 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 
 /**
- * @author Emilio Palumbo
- * @author Paolo Di Tommaso
+ * Implements a {@link Path} for http/ftp protocols
+ *
+ * @author Emilio Palumbo <emiliopalumbo@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @PackageScope
 @CompileStatic
@@ -59,11 +61,11 @@ class XPath implements Path {
         this.path = path
     }
 
-    private getBase() {
+    private URI getBaseUri() {
         fs?.getBaseUri()
     }
 
-    private XPath createHttpPath(String path) {
+    private XPath createXPath(String path) {
         fs && path.startsWith('/') ? new XPath(fs, path) : new XPath(null, path)
     }
 
@@ -79,7 +81,7 @@ class XPath implements Path {
 
     @Override
     Path getRoot() {
-        return createHttpPath("/")
+        return createXPath("/")
     }
 
     @Override
@@ -93,7 +95,7 @@ class XPath implements Path {
         String result = path.parent ? path.parent.toString() : null
         if( result ) {
             if( result != '/' ) result += '/'
-            return createHttpPath(result)
+            return createXPath(result)
         }
         return null
     }
@@ -114,6 +116,11 @@ class XPath implements Path {
     }
 
     @Override
+    Path normalize() {
+        return new XPath(fs, path.normalize())
+    }
+
+    @Override
     boolean startsWith(Path other) {
         return startsWith(other.toString())
     }
@@ -131,11 +138,6 @@ class XPath implements Path {
     @Override
     boolean endsWith(String other) {
         return path.endsWith(other)
-    }
-
-    @Override
-    Path normalize() {
-        return path.normalize()
     }
 
     @Override
@@ -190,12 +192,12 @@ class XPath implements Path {
     @Override
     Path relativize(Path other) {
         def otherPath = ((XPath)other).path
-        return createHttpPath(path.relativize(otherPath).toString())
+        return createXPath(path.relativize(otherPath).toString())
     }
 
     @Override
     URI toUri() {
-        base ? new URI("$base$path") : new URI("$path")
+        baseUri ? new URI("$baseUri$path") : new URI("$path")
     }
 
     @Override
@@ -268,12 +270,25 @@ class XPath implements Path {
         return this.fs == that.fs && this.path == that.path
     }
 
+    /**
+     * @return The unique hash code for this pah
+     */
     @Override
     int hashCode() {
         return Objects.hash(fs,path)
     }
 
-
+    /**
+     * Path factory method.
+     *
+     * @param str
+     *      A fully qualified URI path string e.g. {@code http://www.host.name/data.file.txt}
+     * @return
+     *      The corresponding {@link XPath} object
+     * @throws
+     *      ProviderMismatchException When the URI scheme does not match any supported protocol i.e. {@code ftp},
+     *      {@code http}, {@code https}
+     */
     static XPath get(String str) {
         if( str == null )
             return null

@@ -19,24 +19,19 @@
  */
 
 package nextflow.file.http
-
-import com.github.tomakehurst.wiremock.junit.WireMockRule
-import com.github.tomjankes.wiremock.WireMockGroovy
-import org.junit.Rule
-
 import java.nio.charset.Charset
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import com.github.tomakehurst.wiremock.junit.WireMockRule
+import com.github.tomjankes.wiremock.WireMockGroovy
+import org.junit.Rule
 import spock.lang.Specification
-import spock.lang.Stepwise
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Stepwise
 class HttpFilesTests extends Specification {
 
     @Rule
@@ -72,6 +67,11 @@ class HttpFilesTests extends Specification {
         then:
         Files.size(path) == 10
         Files.getLastModifiedTime(path).toString() == "2016-11-04T21:50:34Z"
+
+        when:
+        def path2 = Paths.get(new URI('http://localhost:18080/missing.html'))
+        then:
+        !Files.exists(path2)
     }
 
     def 'should create a new file system ' () {
@@ -85,16 +85,6 @@ class HttpFilesTests extends Specification {
         fs.provider() instanceof HttpFileSystemProvider
     }
 
-    def 'should not create am existing file system ' () {
-
-        given:
-        def uri = new URI('http://www.nextflow.io/index.html')
-        when:
-        def fs = FileSystems.newFileSystem( uri, [:] )
-        then:
-        def ex = thrown(IllegalStateException)
-        ex.message == "File system `http://www.nextflow.io` already exists"
-    }
 
     def 'read a http file ' () {
         given:
@@ -110,21 +100,95 @@ class HttpFilesTests extends Specification {
         lines.size()>0
         lines[0] == '<html>'
 
-//        when:
-//        def bytes = Files.readAllBytes(path)
-//        then:
-//        new String(bytes) == ''
     }
 
-    def 'should check if a file exits' () {
+    def 'should check file properties' () {
 
         when:
         def path1 = Paths.get(new URI('http://www.nextflow.io/index.html'))
         def path2 = Paths.get(new URI('http://www.google.com/unknown'))
+        def path3 = Paths.get(new URI('http://www.nextflow.io/index.html'))
+
         then:
         Files.exists(path1)
         Files.size(path1) > 0
+        !Files.isDirectory(path1)
+        Files.isReadable(path1)
+        !Files.isExecutable(path1)
+        !Files.isWritable(path1)
+        !Files.isHidden(path1)
+        Files.isRegularFile(path1)
+        !Files.isSymbolicLink(path1)
+        Files.isSameFile(path1, path3)
+        !Files.isSameFile(path1, path2)
         !Files.exists(path2)
+
+    }
+
+    def 'should read FTP file' () {
+        when:
+        def lines = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt')).text.readLines()
+        then:
+        lines[0] == 'User-agent: *'
+        lines[1] == 'Disallow: /'
+    }
+
+    def 'should read HTTPS file' () {
+
+        given:
+        def uri = new URI('https://www.nextflow.io/index.html')
+        when:
+        def path = Paths.get(uri)
+        then:
+        path instanceof XPath
+
+        when:
+        def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
+        then:
+        lines.size()>0
+        lines[0] == '<!DOCTYPE html>'
+
+    }
+
+    def 'should copy a file' () {
+
+        given:
+        def uri = new URI('https://www.nextflow.io/index.html')
+        def source = Paths.get(uri)
+        def target = Files.createTempDirectory('nf').resolve('test.html')
+
+        when:
+        Files.copy(source, target)
+
+        then:
+        source.text == target.text
+
+        cleanup:
+        target?.parent?.deleteDir()
+
+    }
+
+    def 'should read lines' () {
+        given:
+        def path = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+
+        when:
+        def lines = Files.readAllLines(path)
+        then:
+        lines[0] == 'User-agent: *'
+        lines[1] == 'Disallow: /'
+    }
+
+    def 'should read all bytes' ( ) {
+        given:
+        def path = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+
+        when:
+        def bytes = Files.readAllBytes(path)
+        def lines = new String(bytes).readLines()
+        then:
+        lines[0] == 'User-agent: *'
+        lines[1] == 'Disallow: /'
 
     }
 

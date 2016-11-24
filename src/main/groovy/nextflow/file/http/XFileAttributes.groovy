@@ -27,7 +27,11 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 
 /**
- * Created by emilio on 08/11/16.
+ * Implements a {@link BasicFileAttributes} for http/ftp
+ * file system providers
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Emilio Palumbo <emiliopalumbo@gmail.com>
  */
 @PackageScope
 @CompileStatic
