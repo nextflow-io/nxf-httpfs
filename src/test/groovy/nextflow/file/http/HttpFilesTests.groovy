@@ -19,6 +19,8 @@
  */
 
 package nextflow.file.http
+
+import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -173,7 +175,7 @@ class HttpFilesTests extends Specification {
         def path = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
 
         when:
-        def lines = Files.readAllLines(path)
+        def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
         then:
         lines[0] == 'User-agent: *'
         lines[1] == 'Disallow: /'
@@ -189,6 +191,42 @@ class HttpFilesTests extends Specification {
         then:
         lines[0] == 'User-agent: *'
         lines[1] == 'Disallow: /'
+
+    }
+
+    def 'should read with a newByteChannel' () {
+
+        given:
+        wireMock.stub {
+            request {
+                method "GET"
+                url "/index.txt"
+            }
+            response {
+                status 200
+                body "01234567890123456789012345678901234567890123456789"
+                headers {
+                    "Content-Type" "text/html"
+                    "Content-Length" "50"
+                    "Last-Modified" "Fri, 04 Nov 2016 21:50:34 GMT"
+                }
+            }
+        }
+
+        when:
+        def path = Paths.get(new URI('http://localhost:18080/index.txt'))
+        def sbc = Files.newByteChannel(path)
+        def buffer = new ByteArrayOutputStream()
+        ByteBuffer bf = ByteBuffer.allocate(15)
+        while((sbc.read(bf))>0) {
+            bf.flip();
+            buffer.write(bf.array(), 0, bf.limit())
+            bf.clear();
+        }
+
+        then:
+        buffer.toString() == path.text
+        buffer.toString() == '01234567890123456789012345678901234567890123456789'
 
     }
 

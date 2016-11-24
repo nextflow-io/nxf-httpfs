@@ -148,15 +148,14 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         if (options.size() > 0) {
             for (OpenOption opt: options) {
                 // All OpenOption values except for APPEND and WRITE are allowed
-                if (opt == StandardOpenOption.APPEND ||
-                        opt == StandardOpenOption.WRITE)
+                if (opt == StandardOpenOption.APPEND || opt == StandardOpenOption.WRITE)
                     throw new UnsupportedOperationException("'$opt' not allowed");
             }
         }
 
-        final connection = new URL(path.toUri().toString()).openConnection()
-        final size = connection.getContentLengthLong()
-        final stream = connection.getInputStream()
+        final conn = new URL(path.toUri().toString()).openConnection()
+        final size = conn.getContentLengthLong()
+        final stream = new BufferedInputStream(conn.getInputStream())
 
         new SeekableByteChannel() {
 
@@ -164,13 +163,14 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
             @Override
             int read(ByteBuffer buffer) throws IOException {
-                def data
+                def data=0
                 int len=0
-                while( (data=stream.read())!=-1 && len<buffer.capacity()) {
-                    buffer.put(len++, (byte)data)
+                while( len<buffer.capacity() && (data=stream.read())!=-1 ) {
+                    buffer.put((byte)data)
+                    len++
                 }
                 _position += len
-                return len
+                return len ?: -1
             }
 
             @Override
@@ -254,7 +254,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             }
         }
 
-        return new URL(path.toUri().toString()).newInputStream()
+        return new URL(path.toUri().toString()).openStream()
     }
 
     /**
