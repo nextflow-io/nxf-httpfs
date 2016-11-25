@@ -39,11 +39,10 @@ class HttpFilesTests extends Specification {
     @Rule
     WireMockRule wireMockRule = new WireMockRule(18080)
 
-    def wireMock = new WireMockGroovy(18080)
-
     def 'should read http file from WireMock' () {
 
         given:
+        def wireMock = new WireMockGroovy(18080)
         wireMock.stub {
             request {
                 method "GET"
@@ -197,6 +196,7 @@ class HttpFilesTests extends Specification {
     def 'should read with a newByteChannel' () {
 
         given:
+        def wireMock = new WireMockGroovy(18080)
         wireMock.stub {
             request {
                 method "GET"
